@@ -6,6 +6,7 @@
 
 # TO DO: import modules
 import socket
+import os
 # constants
 IP = '0.0.0.0'
 PORT = 8080
@@ -40,15 +41,17 @@ def handle_client_request(resource, client_socket):
 
     # TO DO: read the data from the file
     # data = get_file_data(filename)
-    data = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר\\htttp_server_omer_jonathan_ofek\\webroot"
-    split_recourse = resource.split("/")
+    data = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
+    split_recourse = resource.split("\\")
     for split in split_recourse:
-        data += "\\" + split
+        data += '\\' + split
+    print(data)
     http_header = "HTTP/1.1 200 ok\\r\\n"
-    http_header += "Content-Length: 2652\\r\\n"
+    http_header += f"Content-Length: {(os.path.getsize(data))}\\r\\n"
     http_header += "Content-Type: <text/html; charset=utf-8> \\r\\n"
     http_header += "\\r\\n"
     http_response = http_header + data
+    print(http_response)
     client_socket.send(http_response.encode())
 
 
@@ -57,8 +60,9 @@ def validate_http_request(request):
     request_str = request.decode('utf-8')
     split_request = request_str.split(' ')
     print(split_request)
-    if (split_request[0] == 'GET'):
-            request_url = request_str[1].replace("/", "\\")
+    if (split_request[0] == 'GET') and split_request[2].startswith('HTTP/1.1'):
+            request_url = split_request[1].replace("/", "\\")
+            print(request_url)
             x = (True, request_url)
             return x
     y = (False, None)
