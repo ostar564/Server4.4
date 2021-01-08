@@ -10,7 +10,7 @@ import os
 # constants
 IP = '127.0.0.1'
 PORT = 8081
-SOCKET_TIMEOUT = 30
+SOCKET_TIMEOUT = 3
 import codecs
 
 
@@ -48,12 +48,16 @@ def handle_client_request(resource, client_socket):
         data += '\\' + split
     data1 = get_file_data(data)
     if os.path.isfile(data):
-        http_header = "HTTP/1.1 200 OK\\r\\n"
-        http_header += f"Content-Length: {(os.path.getsize(data))}\\r\\n"
-        http_header += f"Content-Type: {content_type(data)} \\r\\n"
-        http_header += "\\r\\n\n"
-        http_response = http_header + data1.decode()
-        client_socket.send(http_response.encode())
+        http_header = "HTTP/1.1 200 OK\r\n"
+        http_header += f"Content-Length: {(os.path.getsize(data))}\r\n"
+        http_header += f"Content-Type: {content_type(data)}\r\n"
+        http_header += "\r\n"
+        http_response = http_header.encode('UTF-8')
+        if isinstance(data1, bytes):
+            http_response += data1
+        else:
+            http_response += data1.encode('UTF-8')
+        client_socket.send(http_response)
 
 
 def get_file_data(filename):
@@ -74,11 +78,13 @@ def content_type(filename):
     """
     name = filename[len(filename) - filename[::-1].index("."):len(filename)]
     if name == "html" or name == "txt":
-        return 'text/html; charset=utf-8'
+        return "text/html; charset=utf-8"
     if name == "jpg" or name == "ico" or name == "gif" or name == "png" or name:
         return 'image/jpeg'
     if name == "css":
-        return  'text/css'
+        return 'text/css'
+    if name == "js":
+        return "text/javascript; charset=UTF-8"
 
 
 
@@ -88,6 +94,7 @@ def content_type(filename):
 def validate_http_request(request):
     """ Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL """
     request_str = request.decode('utf-8')
+    print(request_str)
     split_request = request_str.split(' ')
     if (split_request[0] == 'GET') and split_request[2].startswith('HTTP/1.1'):
             request_url = split_request[1].replace("/", "\\")
@@ -105,7 +112,7 @@ def handle_client(client_socket):
     while True:
         # TO DO: insert code that receives client request
         # get client request
-        client_request = client_socket.recv(2048)
+        client_request = client_socket.recv(4096)
         valid_http, resource = validate_http_request(client_request)
         if valid_http:
             print('Got a valid HTTP request')
