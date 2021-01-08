@@ -12,6 +12,7 @@ IP = '127.0.0.1'
 PORT = 8081
 SOCKET_TIMEOUT = 3
 import codecs
+REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
 
 
 
@@ -29,9 +30,6 @@ def handle_client_request(resource, client_socket):
     # else:
     #     url = resource
     #
-    # TO DO: check if URL had been redirected, not available or other error code. For example:
-    # if url in REDIRECTION_DICTIONARY:
-    #     # TO DO: send 302 redirection response
 
     # # TO DO: extract requested file type from URL (html, jpg etc)
     # if filetype == 'html':
@@ -45,10 +43,21 @@ def handle_client_request(resource, client_socket):
     data = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
     split_recourse = resource.split("\\")
     for split in split_recourse:
-        data += '\\' + split
-    data1 = get_file_data(data)
-    if os.path.isfile(data):
-        http_header = "HTTP/1.1 200 OK\r\n"
+        data += split + '\\'
+    print(data)
+# TO DO: check if URL had been redirected, not available or other error code. For example:
+    name = data[len(data) - data[::-1].index("\\"):len(data)]
+    if name in REDIRECTION_DICTIONARY:
+        header_302 = "HTTP/1.1 302\r\n"
+        header_302 += "Location:"
+        header_302 += REDIRECTION_DICTIONARY[name]
+        header_302 += "\r\n\r\n"
+        client_socket.send(header_302.encode())
+
+
+    elif os.path.isfile(data):
+        data1 = get_file_data(data)
+        http_header = "HTTP/1.1 200\r\n"
         http_header += f"Content-Length: {(os.path.getsize(data))}\r\n"
         http_header += f"Content-Type: {content_type(data)}\r\n"
         http_header += "\r\n"
@@ -58,6 +67,10 @@ def handle_client_request(resource, client_socket):
         else:
             http_response += data1.encode('UTF-8')
         client_socket.send(http_response)
+    else:
+        header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
+        client_socket.send(header_404)
+
 
 
 def get_file_data(filename):
@@ -119,6 +132,8 @@ def handle_client(client_socket):
             handle_client_request(resource, client_socket)
         else:
             print('Error: Not a valid HTTP request')
+            header_500 = "HTTP/1.1 500 \r\n\r\n".encode()
+            client_socket.send(header_500)
             break
     print('Closing connection')
     client_socket.close()
