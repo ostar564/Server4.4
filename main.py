@@ -9,8 +9,8 @@ import socket
 import os
 # constants
 IP = '127.0.0.1'
-PORT = 8081
-SOCKET_TIMEOUT = 3
+PORT = 8080
+SOCKET_TIMEOUT = 10
 import codecs
 REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
 
@@ -23,39 +23,19 @@ def get_file_data(filename):
 
 def handle_client_request(resource, client_socket):
     """ Check the required resource, generate proper HTTP response and send to client"""
-    # TO DO : add code that given a resource (URL and parameters) generates the proper response
-
-    # if resource == '':
-    #     url = DEFAULT_URL
-    # else:
-    #     url = resource
-    #
-
-    # # TO DO: extract requested file type from URL (html, jpg etc)
-    # if filetype == 'html':
-    #     http_header = # TO DO: generate proper HTTP header
-    # elif filetype == 'jpg':
-    #     http_header = # TO DO: generate proper jpg header
-    # # TO DO: handle all other headers
-
-    # TO DO: read the data from the file
-    # data = get_file_data(filename)
     data = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
     split_recourse = resource.split("\\")
-    for split in split_recourse:
-        data += split + '\\'
-    print(data)
+    for split in split_recourse[1:]:
+        data += '\\' + split
 # TO DO: check if URL had been redirected, not available or other error code. For example:
     name = data[len(data) - data[::-1].index("\\"):len(data)]
+    print(name)
     if name in REDIRECTION_DICTIONARY:
-        header_302 = "HTTP/1.1 302\r\n"
-        header_302 += "Location:"
-        header_302 += REDIRECTION_DICTIONARY[name]
-        header_302 += "\r\n\r\n"
-        client_socket.send(header_302.encode())
-
-
-    elif os.path.isfile(data):
+        header_302 = "HTTP/1.1 302\r\n" + "Location:" + data[len(data): len(data) - data[::-1].index("\\")] + REDIRECTION_DICTIONARY[name] + "\r\n\r\n"
+        print(header_302)
+        header_302 = header_302.encode('UTF-8')
+        client_socket.send(header_302)
+    if os.path.isfile(data):
         data1 = get_file_data(data)
         http_header = "HTTP/1.1 200\r\n"
         http_header += f"Content-Length: {(os.path.getsize(data))}\r\n"
@@ -155,7 +135,4 @@ def main():
 if __name__ == "__main__":
     # Call the main handler function
     main()
-
-
-
 
