@@ -7,50 +7,42 @@
 # TO DO: import modules
 import socket
 import os
+import codecs
 # constants
 IP = '127.0.0.1'
 PORT = 8080
 SOCKET_TIMEOUT = 10
-import codecs
 REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
-
-
-
-
-def get_file_data(filename):
-    """ Get data from file """
 
 
 def handle_client_request(resource, client_socket):
     """ Check the required resource, generate proper HTTP response and send to client"""
-    data = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
+    filename = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
     split_recourse = resource.split("\\")
     for split in split_recourse[1:]:
-        data += '\\' + split
+        filename += '\\' + split
 # TO DO: check if URL had been redirected, not available or other error code. For example:
-    name = data[len(data) - data[::-1].index("\\"):len(data)]
-    print(name)
-    if name in REDIRECTION_DICTIONARY:
-        header_302 = "HTTP/1.1 302\r\n" + "Location:" + data[len(data): len(data) - data[::-1].index("\\")] + REDIRECTION_DICTIONARY[name] + "\r\n\r\n"
+    name = filename[len(filename) - filename[::-1].index("\\"):len(filename)]
+    if os.path.isfile(filename):
+        data = get_file_data(filename)
+        http_header = "HTTP/1.1 200\r\n"
+        http_header += f"Content-Length: {(os.path.getsize(filename))}\r\n"
+        http_header += f"Content-Type: {content_type(filename)}\r\n"
+        http_header += "\r\n"
+        http_response = http_header.encode('UTF-8')
+        if isinstance(data, bytes):
+            http_response += data
+        else:
+            http_response += data.encode('UTF-8')
+        client_socket.send(http_response)
+    elif name in REDIRECTION_DICTIONARY.keys():
+        header_302 = "HTTP/1.1 302\r\n" + "Location:" + filename[len(filename): len(filename) - filename[::-1].index("\\")] + REDIRECTION_DICTIONARY[name] + "\r\n\r\n"
         print(header_302)
         header_302 = header_302.encode('UTF-8')
         client_socket.send(header_302)
-    if os.path.isfile(data):
-        data1 = get_file_data(data)
-        http_header = "HTTP/1.1 200\r\n"
-        http_header += f"Content-Length: {(os.path.getsize(data))}\r\n"
-        http_header += f"Content-Type: {content_type(data)}\r\n"
-        http_header += "\r\n"
-        http_response = http_header.encode('UTF-8')
-        if isinstance(data1, bytes):
-            http_response += data1
-        else:
-            http_response += data1.encode('UTF-8')
-        client_socket.send(http_response)
     else:
         header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
         client_socket.send(header_404)
-
 
 
 def get_file_data(filename):
@@ -80,10 +72,6 @@ def content_type(filename):
         return "text/javascript; charset=UTF-8"
 
 
-
-
-
-
 def validate_http_request(request):
     """ Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL """
     request_str = request.decode('utf-8')
@@ -95,8 +83,6 @@ def validate_http_request(request):
             return x
     y = (False, None)
     return y
-
-
 
 
 def handle_client(client_socket):
@@ -117,6 +103,7 @@ def handle_client(client_socket):
             break
     print('Closing connection')
     client_socket.close()
+
 
 def main():
     # Open a socket and loop forever while waiting for clients
