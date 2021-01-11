@@ -13,14 +13,13 @@ IP = '127.0.0.1'
 PORT = 8080
 SOCKET_TIMEOUT = 10
 REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
-CONTENT_TYPE = {"html":"text/html; charset=utf-8",
+CONTENT_TYPE = {"html" : "text/html; charset=utf-8",
                     "txt": "text/html; charset=utf-8",
                     "jpg": "image/jpeg",
                     "js": "text/javascript; charset=UTF-8",
                     "css": "text/css",
                     "ico": "image/x-icon",
                     "gif": "image/gif"}
-
 
 
 def handle_client_request(resource, client_socket):
@@ -49,9 +48,39 @@ def handle_client_request(resource, client_socket):
         print(header_302)
         header_302 = header_302.encode('UTF-8')
         client_socket.send(header_302)
+    elif split_recourse[-1].startswith("calculate-next"):
+        num_split=split_recourse[-1].split('=')
+        num = int(num_split[-1])
+        num += 1
+        data2 = str(num)
+        http_header_calcn = "HTTP/1.1 200\r\n"
+        http_header_calcn += f"Content-Length:{len(data2)}\r\n"
+        http_header_calcn += "Content-Type: text/plain\r\n"
+        http_header_calcn += "\r\n"
+        http_response = http_header_calcn.encode('UTF-8')
+        http_response += data2.encode('UTF-8')
+        client_socket.send(http_response)
+    elif split_recourse[-1].startswith("calculate-area"):
+        num_split = split_recourse[-1].split('&')
+        num_split2 = num_split[1].split('=')
+        w = int(num_split2[1])
+        num_split3 = num_split[0].split('=')
+        h = int(num_split3[1])
+        dataReturn = str(h*w/2)
+        http_header_calcA = "HTTP/1.1 200\r\n"
+        http_header_calcA += f"Content-Length:{len(dataReturn)}\r\n"
+        http_header_calcA += "Content-Type: text/plain\r\n"
+        http_header_calcA += "\r\n"
+        http_response = http_header_calcA.encode('UTF-8')
+        http_response += dataReturn.encode('UTF-8')
+        client_socket.send(http_response)
+
     else:
         header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
+        print('404')
         client_socket.send(header_404)
+
+
 
 
 def get_file_data(filename):
@@ -77,9 +106,10 @@ def content_type(filename):
 
 def validate_http_request(request):
     """ Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL """
-    request_str = request.decode('utf-8')
-    split_request = request_str.split(' ')
-    if (split_request[0] == 'GET') and split_request[2].startswith('HTTP/1.1'):
+    split_request = request.split("\r\n".encode())[0].split(" ".encode())
+    for i in range(len(split_request)):
+        split_request[i] = split_request[i].decode()
+    if (split_request[0] == 'GET' or split_request[0] == 'POST') and split_request[2].startswith('HTTP/1.1') and len(split_request) >= 3:
             request_url = split_request[1].replace("/", "\\")
             print(request_url)
             x = (True, request_url)
