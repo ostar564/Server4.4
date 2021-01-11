@@ -13,6 +13,14 @@ IP = '127.0.0.1'
 PORT = 8080
 SOCKET_TIMEOUT = 10
 REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
+CONTENT_TYPE = {"html":"text/html; charset=utf-8",
+                    "txt": "text/html; charset=utf-8",
+                    "jpg": "image/jpeg",
+                    "js": "text/javascript; charset=UTF-8",
+                    "css": "text/css",
+                    "ico": "image/x-icon",
+                    "gif": "image/gif"}
+
 
 
 def handle_client_request(resource, client_socket):
@@ -27,6 +35,7 @@ def handle_client_request(resource, client_socket):
         data = get_file_data(filename)
         http_header = "HTTP/1.1 200\r\n"
         http_header += f"Content-Length: {(os.path.getsize(filename))}\r\n"
+        print("file name", filename)
         http_header += f"Content-Type: {content_type(filename)}\r\n"
         http_header += "\r\n"
         http_response = http_header.encode('UTF-8')
@@ -62,23 +71,17 @@ def content_type(filename):
     :return: type of file
     """
     name = filename[len(filename) - filename[::-1].index("."):len(filename)]
-    if name == "html" or name == "txt":
-        return "text/html; charset=utf-8"
-    if name == "jpg" or name == "ico" or name == "gif" or name == "png" or name:
-        return 'image/jpeg'
-    if name == "css":
-        return 'text/css'
-    if name == "js":
-        return "text/javascript; charset=UTF-8"
+    return CONTENT_TYPE[name]
+
 
 
 def validate_http_request(request):
     """ Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL """
     request_str = request.decode('utf-8')
-    print(request_str)
     split_request = request_str.split(' ')
     if (split_request[0] == 'GET') and split_request[2].startswith('HTTP/1.1'):
             request_url = split_request[1].replace("/", "\\")
+            print(request_url)
             x = (True, request_url)
             return x
     y = (False, None)
@@ -88,19 +91,17 @@ def validate_http_request(request):
 def handle_client(client_socket):
     """ Handles client requests: verifies client's requests are legal HTTP, calls function to handle the requests """
     print('Client connected')
-    while True:
-        # TO DO: insert code that receives client request
-        # get client request
-        client_request = client_socket.recv(4096)
-        valid_http, resource = validate_http_request(client_request)
-        if valid_http:
-            print('Got a valid HTTP request')
-            handle_client_request(resource, client_socket)
-        else:
-            print('Error: Not a valid HTTP request')
-            header_500 = "HTTP/1.1 500 \r\n\r\n".encode()
-            client_socket.send(header_500)
-            break
+    # TO DO: insert code that receives client request
+    # get client request
+    client_request = client_socket.recv(1024)
+    valid_http, resource = validate_http_request(client_request)
+    if valid_http:
+        print('Got a valid HTTP request')
+        handle_client_request(resource, client_socket)
+    else:
+        print('Error: Not a valid HTTP request')
+        header_500 = "HTTP/1.1 500 \r\n\r\n".encode()
+        client_socket.send(header_500)
     print('Closing connection')
     client_socket.close()
 
@@ -113,6 +114,7 @@ def main():
     print("Listening for connections on port %d" % PORT)
 
     while True:
+
         client_socket, client_address = server_socket.accept()
         print('New connection received')
         client_socket.settimeout(SOCKET_TIMEOUT)
