@@ -1,3 +1,5 @@
+
+
 # HTTP Server Shell
 # Author: Barak Gonen
 # Purpose: Provide a basis for Ex. 4.4
@@ -13,44 +15,42 @@ from PIL import Image
 # constants
 IP = '127.0.0.1'
 PORT = 8080
-SOCKET_TIMEOUT = 20
+SOCKET_TIMEOUT = 3
 REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
-CONTENT_TYPE = {"html": "text/html; charset=utf-8",
-                "txt": "text/html; charset=utf-8",
-                "jpg": "image/jpeg",
-                "png": "image/jpeg",
-                "js": "text/javascript; charset=UTF-8",
-                "css": "text/css",
-                "ico": "image/x-icon",
-                "gif": "image/gif"}
+CONTENT_TYPE = {"html": "text/html; charset=utf-8", "txt": "text/html; charset=utf-8",
+                "jpg": "image/jpeg", "png": "image/jpeg", "js": "text/javascript; charset=UTF-8",
+                "css": "text/css", "ico": "image/x-icon", "gif": "image/gif"}
+project_name = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
+uploads_name = "\\htttp_server_omer_jonathan_ofek\\webroot" + "\\uploads\\"
 
 
 def handle_client_request(resource, client_socket, client_request):
-    """ Check the required resource, generate proper HTTP response and send to client"""
-    project_name = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
+    """
+    :param resource: request url
+    :param client_socket: the socket
+    :param client_request: the full request of the client
+    Check the required resource, generate proper HTTP response and send to client
+    """
     filename = project_name
     split_recourse = resource.split("\\")
     for part in split_recourse[1:]:
         filename += '\\' + part
-    # TO DO: check if URL had been redirected, not available or other error code. For example:
-    name = filename[len(filename) - filename[::-1].index("\\"):len(filename)]
+    name = filename[len(filename) - filename[::-1].index("\\"):len(filename)] #get the name of file from url
     if os.path.isfile(filename):
         data = get_file_data(filename)
         http_header = "HTTP/1.1 200\r\n"
         http_header += f"Content-Length: {(os.path.getsize(filename))}\r\n"
         http_header += f"Content-Type: {content_type(filename)}\r\n"
         http_header += "\r\n"
-        http_response = http_header.encode('UTF-8')
+        http_response = http_header.encode()
         if isinstance(data, bytes):
             http_response += data
         else:
-            http_response += data.encode('UTF-8')
+            http_response += data.encode()
         client_socket.send(http_response)
     elif name in REDIRECTION_DICTIONARY.keys():
-        header_302 = "HTTP/1.1 302\r\n" + "Location:" + filename[
-                                                        len(filename): len(filename) - filename[::-1].index("\\")] + \
-                     REDIRECTION_DICTIONARY[name] + "\r\n\r\n"
-        header_302 = header_302.encode('UTF-8')
+        header_302 = "HTTP/1.1 302\r\n" + "Location:" + REDIRECTION_DICTIONARY[name] + "\r\n\r\n"
+        header_302 = header_302.encode()
         client_socket.send(header_302)
     elif split_recourse[-1].startswith("calculate-next"):
         num_split = split_recourse[-1].split('=')
@@ -80,58 +80,68 @@ def handle_client_request(resource, client_socket, client_request):
         client_socket.send(http_response)
     elif split_recourse[-1].startswith("image?image-name"):
         name_for_file = name.split("=")[1]
-        path = ""
-        for part in split_recourse[1:]:
-            if not part.startswith('image?image-name'):
-                path += '\\' + part
-        final_path = project_name + "\\htttp_server_omer_jonathan_ofek\\webroot" + "\\uploads\\" + name_for_file
-        print("final path", final_path)
+        # path = ""
+        # for part in split_recourse[1:]:
+        #     if not part.startswith('image?image-name'):
+        #         path += '\\' + part
+        final_path = project_name + uploads_name + name_for_file
         if os.path.isfile(final_path):
-            print("yes")
             data = get_file_data(final_path)
             http_header = "HTTP/1.1 200\r\n"
             http_header += f"Content-Length: {(os.path.getsize(final_path))}\r\n"
             http_header += f"Content-Type: {content_type(final_path)}\r\n"
             http_header += "\r\n"
-            http_response = http_header.encode('UTF-8')
+            http_response = http_header.encode()
             if isinstance(data, bytes):
                 http_response += data
             else:
-                http_response += data.encode('UTF-8')
+                http_response += data.encode()
             client_socket.send(http_response)
         else:
-            header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
-            client_socket.send(header_404)
-    elif name.startswith("upload?"):
+            error404(client_socket)
+    elif name.startswith("upload?file"):
         name_for_file = name.split("=")[1]
         path = ""
         for part in split_recourse[1:]:
             if not part.startswith('upload?'):
                 path += '\\' + part
-        print("client request", client_request)
         header = client_request.split('\r\n'.encode())
         content_length = 0
         for field in header:
             if field.startswith('Content-Length'.encode()):
-                print(field)
-                content_length = int(field.split(':'.encode())[1].strip())
-        print(content_length)
-        # with open(project_name + path + "\\uploads\\" + unquote(name_for_file), "wb") as file:
-        #     length_datasend = 0
-        #     data = client_socket.recv(content_length)
-        #     length_datasend += len(data)
-        #     print(length_datasend)
-        #     file.write(data)
-        #     file.close()
-        im = Image.open(project_name + path + "\\uploads\\" + unquote(name_for_file), "wb")
-        data = client_socket.recv(content_length)
-        im.write(data)
-        im.close()
+                content_length = int(field.split(':'.encode())[1].replace(" ".encode(), "".encode()))
+        with open(project_name + path + "\\uploads\\" + unquote(name_for_file), "wb") as file:
+            len_content = 0
+            first_data_split = client_request.split('\r\n\r\n'.encode())
+            del first_data_split[0]
+            first_data_sum = 0
+            for first_data_part in first_data_split:
+                file.write(first_data_part)
+                first_data_sum += len(first_data_part)
+            while len_content < content_length - 2048: #get all of the remaining data
+                content_data = client_socket.recv(2048)
+                file.write(content_data)
+                len_content += len(content_data)
+            try:
+                content_data = client_socket.recv(2048)
+                file.write(content_data)
+            except:
+                print()
+            finally:
+                file.close()
         http_header_post = "HTTP/1.1 200\r\n\r\n"
         client_socket.send(http_header_post.encode())
     else:
-        header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
-        client_socket.send(header_404)
+        error404(client_socket)
+
+
+def error404(client_socket):
+    """
+    :param client_socket:
+    sends a 404 error if file isn't found
+    """
+    header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
+    client_socket.send(header_404)
 
 
 def get_file_data(filename):
@@ -155,14 +165,18 @@ def content_type(filename):
 
 
 def validate_http_request(request):
-    """ Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL """
-    print(request)
-    split_request = request.split("\r\n".encode())[0].split(" ".encode())
+    """
+    :param request: gets client request
+    :return: a tuple with true or false, and the header of the request
+    Check if request is a valid HTTP request and returns TRUE / FALSE and the requested URL
+    """
+    split_request = request.split("\r\n".encode())[0].split(" ".encode()) #get http request header
     for i in range(len(split_request)):
         split_request[i] = split_request[i].decode()
-    post_encoded = ""
-    if (split_request[0] == 'GET' or split_request[0] == 'POST') and split_request[2].startswith('HTTP/1.1') and len(
-            split_request) >= 3:
+    # if (not "XMLHttpRequest".encode() in request) and "image?image-name".encode() in request:
+    #     return False, None
+    if (split_request[0] == 'GET' or split_request[0] == 'POST') and len(
+            split_request) >= 3 and split_request[2].startswith('HTTP/1.1'):
         request_url = split_request[1].replace("/", "\\")
         x = (True, request_url)
         return x
@@ -171,11 +185,13 @@ def validate_http_request(request):
 
 
 def handle_client(client_socket):
-    """ Handles client requests: verifies client's requests are legal HTTP, calls function to handle the requests """
+    """
+    :param client_socket: the sockets
+    Handles client requests: verifies client's requests are legal HTTP, calls function to handle the requests
+    """
     print('Client connected')
-    # TO DO: insert code that receives client request
     # get client request
-    client_request = client_socket.recv(1024)
+    client_request = client_socket.recv(2048) #recieve from client the data
     valid_http, resource = validate_http_request(client_request)
     if valid_http:
         print('Got a valid HTTP request')
@@ -190,7 +206,7 @@ def handle_client(client_socket):
 
 def main():
     # Open a socket and loop forever while waiting for clients
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#open a server socket
     server_socket.bind((IP, PORT))
     server_socket.listen(10)
     print("Listening for connections on port %d" % PORT)
@@ -198,8 +214,11 @@ def main():
     while True:
         client_socket, client_address = server_socket.accept()
         print('New connection received')
-        client_socket.settimeout(SOCKET_TIMEOUT)
-        handle_client(client_socket)
+        client_socket.settimeout(SOCKET_TIMEOUT)#set a timeout
+        try:
+            handle_client(client_socket)
+        except:
+            print("Request did not succeed, continue.")
 
 
 if __name__ == "__main__":
