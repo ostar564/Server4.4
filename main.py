@@ -1,5 +1,4 @@
 
-
 # HTTP Server Shell
 # Author: Barak Gonen
 # Purpose: Provide a basis for Ex. 4.4
@@ -20,8 +19,11 @@ REDIRECTION_DICTIONARY = {'index1.html': 'index.html'}
 CONTENT_TYPE = {"html": "text/html; charset=utf-8", "txt": "text/html; charset=utf-8",
                 "jpg": "image/jpeg", "png": "image/jpeg", "js": "text/javascript; charset=UTF-8",
                 "css": "text/css", "ico": "image/x-icon", "gif": "image/gif"}
-project_name = "C:\\Users\\User\\Documents\\עומר סייבר\\סייבר"
-uploads_name = "\\htttp_server_omer_jonathan_ofek\\webroot" + "\\uploads\\"
+absolute_path = os.path.abspath("")
+absolute_path = absolute_path.split("\\")
+del absolute_path[-1]
+absolute_path = "\\".join(absolute_path)
+project_name = absolute_path
 
 
 def handle_client_request(resource, client_socket, client_request):
@@ -80,11 +82,7 @@ def handle_client_request(resource, client_socket, client_request):
         client_socket.send(http_response)
     elif split_recourse[-1].startswith("image?image-name"):
         name_for_file = name.split("=")[1]
-        # path = ""
-        # for part in split_recourse[1:]:
-        #     if not part.startswith('image?image-name'):
-        #         path += '\\' + part
-        final_path = project_name + uploads_name + name_for_file
+        final_path = os.path.abspath("webroot/uploads")+ "\\" + name_for_file
         if os.path.isfile(final_path):
             data = get_file_data(final_path)
             http_header = "HTTP/1.1 200\r\n"
@@ -101,24 +99,23 @@ def handle_client_request(resource, client_socket, client_request):
             error404(client_socket)
     elif name.startswith("upload?file"):
         name_for_file = name.split("=")[1]
-        path = ""
-        for part in split_recourse[1:]:
-            if not part.startswith('upload?'):
-                path += '\\' + part
         header = client_request.split('\r\n'.encode())
         content_length = 0
         for field in header:
             if field.startswith('Content-Length'.encode()):
                 content_length = int(field.split(':'.encode())[1].replace(" ".encode(), "".encode()))
-        with open(project_name + path + "\\uploads\\" + unquote(name_for_file), "wb") as file:
+        print(os.path.abspath("webroot/uploads"))
+        with open(os.path.abspath("webroot/uploads") + "\\" + unquote(name_for_file), "wb") as file:
             len_content = 0
             first_data_split = client_request.split('\r\n\r\n'.encode())
             del first_data_split[0]
             first_data_sum = 0
-            for first_data_part in first_data_split:
+            for first_data_part in first_data_split[:-2]:
                 file.write(first_data_part)
-                first_data_sum += len(first_data_part)
-            while len_content < content_length - 2048: #get all of the remaining data
+                file.write('\r\n\r\n'.encode())  # if txt file has in it \r\n\r\n
+                first_data_sum += len(first_data_part) + len('\r\n\r\n'.encode())
+            file.write(first_data_split[-1])
+            while len_content < content_length - 2048:  # get all of the remaining data
                 content_data = client_socket.recv(2048)
                 file.write(content_data)
                 len_content += len(content_data)
@@ -126,7 +123,7 @@ def handle_client_request(resource, client_socket, client_request):
                 content_data = client_socket.recv(2048)
                 file.write(content_data)
             except:
-                print()
+                pass
             finally:
                 file.close()
         http_header_post = "HTTP/1.1 200\r\n\r\n"
@@ -138,9 +135,10 @@ def handle_client_request(resource, client_socket, client_request):
 def error404(client_socket):
     """
     :param client_socket:
-    sends a 404 error if file isn't found
+    sends 404 error if file isn't found
     """
     header_404 = "HTTP/1.1 404 \r\n\r\n".encode()
+    print(header_404)
     client_socket.send(header_404)
 
 
@@ -173,8 +171,6 @@ def validate_http_request(request):
     split_request = request.split("\r\n".encode())[0].split(" ".encode()) #get http request header
     for i in range(len(split_request)):
         split_request[i] = split_request[i].decode()
-    # if (not "XMLHttpRequest".encode() in request) and "image?image-name".encode() in request:
-    #     return False, None
     if (split_request[0] == 'GET' or split_request[0] == 'POST') and len(
             split_request) >= 3 and split_request[2].startswith('HTTP/1.1'):
         request_url = split_request[1].replace("/", "\\")
